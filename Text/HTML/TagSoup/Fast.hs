@@ -42,7 +42,6 @@ import Data.String
 import Data.Char
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import qualified Data.Text.ICU.Convert as ICU
 import qualified Control.Exception as E
 
 instance IsString Word8 where
@@ -404,18 +403,6 @@ ensureUtf8Xml s
       -- first of all we try decode utf-8.
       -- Some sites specify non utf-8 encoding, while the text is in utf.
     | otherwise =
-    case parseTags $ B.dropWhile isSpace s of
-        --           ^ sometimes there is a space before ?xml
-        (TagOpen "?xml" attrs : _)
-            | Just enc <- lookup "encoding" attrs
-            , B.map toLower enc /= "utf-8" ->
-                unsafePerformIO $
-                    (do -- print enc
-                        c <- ICU.open (toString enc) Nothing
-                        let t = T.encodeUtf8 $ ICU.toUnicode c s
-                        B.length t `seq` return t)
-                    `E.catch`
-                    \ (_ :: E.SomeException) -> return s
                       -- in case of errors try process as utf-8
 --                 TL.fromChunks $
 --                     map (ICU.toUnicode $ unsafePerformIO $
@@ -423,5 +410,5 @@ ensureUtf8Xml s
 --                     BL.toChunks s
 --                IConv.convert (toString enc) "utf-8" s
                 -- convertFuzzy works only on GNU
-        _ -> s -- TL.decodeUtf8With (\ _ -> fmap B.w2c) s
+        s -- TL.decodeUtf8With (\ _ -> fmap B.w2c) s
              -- TL.lenientDecode s
