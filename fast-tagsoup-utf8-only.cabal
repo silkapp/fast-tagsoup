@@ -4,7 +4,7 @@ version:        1.0.4
 copyright:      Vladimir Shabanov 2011-2012
 author:         Vladimir Shabanov <vshabanoff@gmail.com>
 maintainer:     Vladimir Shabanov <vshabanoff@gmail.com>
-homepage:       https://github.com/vshabanov/fast-tagsoup
+homepage:       https://github.com/exbb2/fast-tagsoup
 license:        BSD3
 category:       XML
 license-file:   LICENSE
