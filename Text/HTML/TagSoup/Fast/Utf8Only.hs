@@ -10,14 +10,14 @@
   This module is intended to be used in conjunction with the original @tagsoup@ package:
 
   > import Text.HTML.TagSoup hiding (parseTags, renderTags)
-  > import Text.HTML.TagSoup.Fast
+  > import Text.HTML.TagSoup.Fast.Utf8Only
 
   Remark that tags are returned in lower case and comments are not returned.
 
   In long running multithreaded applications it's generally recommended to use
   'parseTagsT' and work with @[@'Tag' 'Text'@]@ to reduce memory fragmentation.
 -}
-module Text.HTML.TagSoup.Fast
+module Text.HTML.TagSoup.Fast.Utf8Only
     ( parseTags, renderTags, parseTagsT, renderTagsT, ensureUtf8Xml
     , escapeHtml, escapeHtmlT, unescapeHtml, unescapeHtmlT
     )

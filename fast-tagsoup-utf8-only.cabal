@@ -1,5 +1,5 @@
 cabal-version:  >= 1.6
-name:           fast-tagsoup
+name:           fast-tagsoup-utf8-only
 version:        1.0.4
 copyright:      Vladimir Shabanov 2011-2012
 author:         Vladimir Shabanov <vshabanoff@gmail.com>
@@ -19,15 +19,16 @@ description:
     This library is intended to be used in conjunction with the original @tagsoup@ package:
     .
     > import Text.HTML.TagSoup hiding (parseTags, renderTags)
-    > import Text.HTML.TagSoup.Fast
+    > import Text.HTML.TagSoup.Fast.Utf8Only
     .
-    Besides speed @fast-tagsoup@ correctly handles HTML @\<script\>@ and @\<style\>@ tags, converts tags to lower case and can decode non UTF-8 XML for you.
+    Besides speed @fast-tagsoup@ correctly handles HTML @\<script\>@ and @\<style\>@ tags and converts tags to lower case.
+    This fork purposefully removes support for parsing non-utf8 documents, to avoid dependency on text-icu. If you need to handle other encodings, use the original <http://hackage.haskell.org/package/fast-tagsoup>
     .
     This parser is used in production in BazQux Reader feeds and comments crawler.
 
 source-repository head
     type:     git
-    location: https://github.com/vshabanov/fast-tagsoup
+    location: https://github.com/exbb2/fast-tagsoup
 
 -- flag encoding
 --     default: False
@@ -41,6 +42,6 @@ library
 --         exposed-modules: Text.HTML.Download
 
     exposed-modules:
-        Text.HTML.TagSoup.Fast
+        Text.HTML.TagSoup.Fast.Utf8Only
 
     ghc-options: -O2
