@@ -22,7 +22,8 @@ description:
     > import Text.HTML.TagSoup.Fast.Utf8Only
     .
     Besides speed @fast-tagsoup@ correctly handles HTML @\<script\>@ and @\<style\>@ tags and converts tags to lower case.
-    This fork purposefully removes support for parsing non-utf8 documents, to avoid dependency on text-icu. If you need to handle other encodings, use the original <http://hackage.haskell.org/package/fast-tagsoup>
+    This fork purposefully removes support for parsing non-utf8 documents, to avoid dependency on text-icu.
+    If you need to handle other encodings, refer to the original <http://hackage.haskell.org/package/fast-tagsoup>
     .
     This parser is used in production in BazQux Reader feeds and comments crawler.
 
