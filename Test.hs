@@ -1,7 +1,7 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-deprecations #-}
 
-module Test where
+module Main where
 
 import Text.HTML.TagSoup hiding (parseTags, renderTags)
 import Text.HTML.TagSoup.Fast.Utf8Only
@@ -10,8 +10,18 @@ import Text.HTML.TagSoup.Match
 
 import Control.Monad
 import Data.List
--- import Test.QuickCheck
+import Data.String
+import Test.QuickCheck
 
+import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
+import Data.Text.Encoding (decodeUtf8, encodeUtf8)
+import Data.Text (unpack, pack)
+import Text.XML.Light
+
+deriving instance Eq Content
+deriving instance Eq CData
+deriving instance Eq Element
 -- * The Test Monad
 
 type Test a = IO a
@@ -25,46 +35,27 @@ runTest x = x >> putStrLn "All tests passed"
 (===) :: (Show a, Eq a) => a -> a -> IO ()
 a === b = if a == b then pass else putStrLn $ "Does not equal: " ++ show a ++ " =/= " ++ show b
 
-{-
 check :: Testable prop => prop -> IO ()
 check prop = do
-    res <- quickCheckWithResult stdArgs{maxSuccess=1000} prop
+    res <- quickCheckWithResult stdArgs{maxSuccess=1000, chatty=False} prop
     case res of
         Success{} -> pass
         _ -> fail "Property failed"
 
 newtype HTML = HTML ByteString deriving Show
 instance Arbitrary HTML where
-    arbitrary = fmap (HTML . concat) $ listOf $ elements frags
-        where frags = map (:[]) " \n!-</>#&;xy01[]?'\"" ++ ["CDATA","amp","gt","lt"]
-    shrink (HTML x) = map HTML $ zipWith (++) (inits x) (tail $ tails x)
--}
-
+    arbitrary = fmap (HTML . BS.concat) $ listOf $ elements frags
+        where frags = map fromString $ map (:[]) " \n!-</>#&;xy01[]?'\"" ++ ["CDATA","amp","gt","lt"]
+    shrink (HTML x) = map HTML $ zipWith BS.append (BS.inits x) (tail $ BS.tails x)
 
 -- * The Main section
 
-test :: IO ()
-test = runTest $ do
---    warnTests
+main :: IO ()
+main = runTest $ do
     parseTests
---    optionsTests
     renderTests
---    combiTests
---    entityTests
---    matchCombinators
+    entityTests
 
-
-{-
-matchCombinators :: Test ()
-matchCombinators = do
-    tagText (const True) (TagText "test") === True
-    tagText ("test"==) (TagText "test") === True
-    tagText ("soup"/=) (TagText "test") === True
-    tagOpenNameLit "table" (TagOpen "table" [("id", "name")]) === True
-    tagOpenLit "table" (anyAttrLit ("id", "name")) (TagOpen "table" [("id", "name")]) === True
-    tagOpenLit "table" (anyAttrNameLit "id") (TagOpen "table" [("id", "name")]) === True
-    tagOpenLit "table" (anyAttrLit ("id", "name")) (TagOpen "table" [("id", "other name")]) === False
--}
 
 parseTests :: Test ()
 parseTests = do
@@ -118,36 +109,6 @@ parseTests = do
     parseTags "<p>some text</p\n<img alt='&lt; &yyy; &gt;' src=\"abc.gif\">" ===
         [TagOpen "p" [],TagText "some text",TagClose "p"]
 
-{-
-optionsTests :: Test ()
-optionsTests = check $ \(HTML x) -> all (f x) $ replicateM 3 [False,True]
-    where
-        f str [pos,warn,merge] =
-                bool "merge" (not merge || adjacentTagText tags) &&
-                bool "warn" (warn || all (not . isTagWarning) tags) &&
-                bool "pos" (if pos then alternatePos tags else all (not . isTagPosition) tags)
-            where tags = parseTagsOptions parseOptions{optTagPosition=pos,optTagWarning=warn,optTagTextMerge=merge} str
-                  bool x b = b || error ("optionsTests failed with " ++ x ++ " on " ++ show (pos,warn,merge,str,tags))
-
-        -- optTagTextMerge implies no adjacent TagText cells
-        -- and none separated by only warnings or positions
-        adjacentTagText = g True -- can the next be a tag text
-            where g i (x:xs) | isTagText x = i && g False xs
-                             | isTagPosition x || isTagWarning x = g i xs
-                             | otherwise = g True xs
-                  g i [] = True
-
-        -- optTagPosition implies every element must be followed
-        -- by a position node, no two position nodes must be adjacent
-        -- and all positions must be increasing
-        alternatePos (TagPosition l1 c1 : x : TagPosition l2 c2 : xs)
-            | (l1,c1) <= (l2,c2) && not (isTagPosition x) = alternatePos $ TagPosition l2 c2 : xs
-        alternatePos [TagPosition l1 c1, x] | not $ isTagPosition x = True
-        alternatePos [] = True
-        alternatePos _ = False
--}
-      
-
 renderTests :: Test ()
 renderTests = do
     let rp = renderTags . parseTags
@@ -163,10 +124,10 @@ renderTests = do
     rp "<!-- neil -->" === "<!-- neil -->"
     rp "<a test=\"a&apos;b\">" === "<a test=\"a&apos;b\">"
     rp "<a test=\"a&amp;b\">" === "<a test=\"a&amp;b\">"
---    escapeHTML "this is a &\" <test> '" === "this is a &amp;&quot; &lt;test&gt; '"
---    check $ \(HTML x) -> let y = rp x in rp y == (y :: String)
+    check $ \(HTML x)  -> let y = rp x in rp y == (y :: ByteString)
+    testF <- readFile "testfile.xml"
+    parseXML testF === parseXML (unpack $ decodeUtf8 $ rp $ encodeUtf8 $ pack testF)
 
-{-
 entityTests :: Test ()
 entityTests = do
     lookupNumericEntity "65" === Just 'A'
@@ -180,24 +141,3 @@ entityTests = do
     lookupNamedEntity "haskell" === Nothing
     escapeXMLChar 'a' === Nothing
     escapeXMLChar '&' === Just "amp"
-
-
-combiTests :: Test ()
-combiTests = do
-    (TagText "test" ~== TagText ""    ) === True
-    (TagText "test" ~== TagText "test") === True
-    (TagText "test" ~== TagText "soup") === False
-    (TagText "test" ~== "test") === True
-    (TagOpen "test" [] ~== "<test>") === True
-    (TagOpen "test" [] ~== "<soup>") === False
-    (TagOpen "test" [] ~/= "<soup>") === True
-    (TagComment "foo" ~== "<!--foo-->") === True
-    (TagComment "bar" ~== "<!--bar-->") === True
-
-
-warnTests :: Test ()
-warnTests = do
-    let p = parseTagsOptions parseOptions{optTagPosition=True,optTagWarning=True}
-        wt x = [(msg,c) | TagWarning msg:TagPosition _ c:_ <- tails $ p x]
-    wt "neil &foo bar" === [("Unknown entity: foo",10)]
--}
