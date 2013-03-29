@@ -173,7 +173,7 @@ parseTags s = B.inlinePerformIO $ withForeignPtr fp $ \ p ->
                         | otherwise = TagClose (toLowerBS $ mkS left n)
           markupDeclOpen p 0 = dat p 0 2
           markupDeclOpen !p !l
-              | alpha (r p) = tagName True (pp p) (mm l) 1
+              | alpha (r p) = tagName True (pp p) (mm l) 2
               | r p == "-" && l >= 2 && ri p 1 == "-" -- next p l "--"
                   = commentStart (p `plusPtr` 2) (l - 2) 0
               | l >= 7 && r p == "[" && ri p 1 == "C" && ri p 2 == "D"
