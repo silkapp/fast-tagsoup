@@ -105,6 +105,7 @@ parseTags s = B.inlinePerformIO $ withForeignPtr fp $ \ p ->
           mkText unescape !left !n
               | unescape  = TagText $ unescapeHtml $ mkS left n
               | otherwise = TagText $ mkS left n
+          mkComment left n = TagComment $ mkS left n
                             -- leave script/style/CDATA as is
           script :: P -> Int -> Int -> [Tag B.ByteString]
           script _ 0 0 = []
@@ -224,11 +225,11 @@ parseTags s = B.inlinePerformIO $ withForeignPtr fp $ \ p ->
               | r p == ">" --  || r p == "/"
                   = beforeAttName (addAttr t a (mkS l n)) p l
               | otherwise = attValueUnquoted t a (pp p) (mm l) (p1 n)
-          commentStart _ 0 _ = [] -- we do not output comments
+          commentStart _ 0 n = [mkComment 0 n] -- we do not output comments
           commentStart !p !l !n
               | l >= 3 && r p == "-" && ri p 1 == "-" && ri p 2 == ">"
                   -- next p l "-->"
-                  = dat (p `plusPtr` 3) (l - 3) 0
+                  = mkComment l n : dat (p `plusPtr` 3) (l - 3) 0
               | otherwise = commentStart (pp p) (mm l) (p1 n)
           cdataSection p 0 n = dat p 0 n
           cdataSection !p !l !n
@@ -389,6 +390,8 @@ renderTags' escape concat = go []
               go (">" : t : "</" : acc) ts
           go acc (TagText t : ts) =
               go (escape t : acc) ts
+          go acc (TagComment t : ts) =
+              go ("-->": t : "<!--" : acc) ts
           go acc (_ : ts) = go acc ts -- make compiler happy
           renderAtts [] rs = rs
           renderAtts ((a,v):as) rs =
