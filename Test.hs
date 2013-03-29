@@ -68,7 +68,7 @@ matchCombinators = do
 
 parseTests :: Test ()
 parseTests = do
-    parseTags "<!DOCTYPE TEST>" === [TagOpen "!DOCTYPE" [("TEST","")]]
+    parseTags "<!DOCTYPE TEST>" === [TagOpen "!doctype" [("test","")]]
     parseTags "<test \"foo bar\">" === [TagOpen "test" [("\"foo",""),("bar\"","")]]
     parseTags "<test baz \"foo\">" === [TagOpen "test" [("baz",""),("\"foo\"","")]]
     parseTags "<test 'foo bar'>" === [TagOpen "test" [("'foo",""),("bar'","")]]
@@ -88,11 +88,14 @@ parseTests = do
     parseTags "<foo bar=\"bar&amp;baz\">" === [TagOpen "foo" [("bar","bar&baz")]]
     parseTags "hey &how are you" === [TagText "hey &how are you"]
     parseTags "hey &how; are you" === [TagText "hey &how; are you"]
-    parseTags "hey &amp are you" === [TagText "hey & are you"]
+--    parseTags "hey &amp are you" === [TagText "hey & are you"] -- This is not valid XML!
     parseTags "hey &amp; are you" === [TagText "hey & are you"]
+    parseTags "hey &apos; are you" === [TagText "hey ' are you"]
+    parseTags "<a test=\"&apos;\">" === [TagOpen "a" [("test", "'")]]
+    parseTags "<bla:hoi att:bla>" === [TagOpen "bla:hoi" [("att:bla","")]]
 
     -- real cases reported by users
-    parseTags "test &#10933649; test" === [TagText "test ? test"]
+    parseTags "test &#10933649; test" === [TagText "test ? test"] -- HTML edge-case
 
     parseTags "<a href=\"series.php?view=single&ID=72710\">" === [TagOpen "a" [("href","series.php?view=single&ID=72710")]]
 
@@ -105,7 +108,7 @@ parseTests = do
     parseTags "<a title='foo'bar' href=correct>text" === [TagOpen "a" [("title","foo"),("bar'",""),("href", "correct")],TagText "text"]
 
     parseTags "<test><![CDATA[Anything goes, <em>even hidden markup</em> &amp; entities]]> but this is outside</test>" ===
-        [TagOpen "test" [],TagText "Anything goes, <em>even hidden markup</em> &amp; entities but this is outside",TagClose "test"]
+        [TagOpen "test" [],TagText "Anything goes, <em>even hidden markup</em> &amp; entities", TagText " but this is outside",TagClose "test"]
 
     parseTags "<a \r\n href=\"url\">" === [TagOpen "a" [("href","url")]]
 
@@ -149,16 +152,17 @@ renderTests :: Test ()
 renderTests = do
     let rp = renderTags . parseTags
     rp "<test>" === "<test>"
-    rp "<br></br>" === "<br />"
+    rp "<br></br>" === "<br/>"
     rp "<script></script>" === "<script></script>"
     rp "hello & world" === "hello &amp; world"
     rp "<a href=test>" === "<a href=\"test\">"
-    rp "<a href>" === "<a href>"
-    rp "<a href?>" === "<a href?>"
+    rp "<a href>" === "<a href=\"\">"
+--    rp "<a href?>" === "<a href?>" Not valid XML
     rp "<?xml foo?>" === "<?xml foo ?>"
     rp "<?xml foo?>" === "<?xml foo ?>"
     rp "<!-- neil -->" === "<!-- neil -->"
-    rp "<a test=\"a&apos;b\">" === "<a test=\"a'b\">"
+    rp "<a test=\"a&apos;b\">" === "<a test=\"a&apos;b\">"
+    rp "<a test=\"a&amp;b\">" === "<a test=\"a&amp;b\">"
 --    escapeHTML "this is a &\" <test> '" === "this is a &amp;&quot; &lt;test&gt; '"
 --    check $ \(HTML x) -> let y = rp x in rp y == (y :: String)
 
