@@ -1,4 +1,4 @@
-cabal-version:  >= 1.6
+cabal-version:  >= 1.10
 name:           fast-tagsoup-utf8-only
 version:        1.0.4.100
 copyright:      Vladimir Shabanov 2011-2012
